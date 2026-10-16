@@ -1,3 +1,5 @@
+import re
+
 from app.models import Remediation, RootCause, Signal
 
 RULES = [
@@ -7,7 +9,7 @@ RULES = [
         "Check dependency health, DNS, network policy, security groups, and recent deployments.",
     ),
     (
-        ("out of memory", "oom", "memory limit"),
+        ("out of memory", "oom", "oomkilled", "memory limit"),
         "Memory exhaustion",
         "Inspect memory usage and limits; identify leaks or abnormal workload before scaling.",
     ),
@@ -29,19 +31,24 @@ RULES = [
 ]
 
 
+def matches_keyword(message: str, keyword: str) -> bool:
+    if keyword in {"oom", "500", "503", "5xx"}:
+        return re.search(r"(?<![a-z0-9])" + re.escape(keyword) + r"(?![a-z0-9])", message) is not None
+    return keyword in message
+
+
 def analyze(signals: list[Signal]) -> tuple[list[RootCause], list[Remediation]]:
-    text = " ".join(s.message.lower() for s in signals)
     causes: list[RootCause] = []
     remediations: list[Remediation] = []
 
     for keywords, cause, action in RULES:
-        matches = [keyword for keyword in keywords if keyword in text]
+        matches = [keyword for keyword in keywords if any(matches_keyword(signal.message.lower(), keyword) for signal in signals)]
         if not matches:
             continue
         confidence = min(0.95, 0.55 + 0.1 * len(matches))
         evidence = [
             s.message for s in signals
-            if any(keyword in s.message.lower() for keyword in keywords)
+            if any(matches_keyword(s.message.lower(), keyword) for keyword in keywords)
         ][:3]
         causes.append(RootCause(cause=cause, confidence=confidence, evidence=evidence))
         remediations.append(
