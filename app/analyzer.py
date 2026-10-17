@@ -34,7 +34,8 @@ RULES = [
 def matches_keyword(message: str, keyword: str) -> bool:
     if keyword in {"oom", "500", "503", "5xx"}:
         return re.search(r"(?<![a-z0-9])" + re.escape(keyword) + r"(?![a-z0-9])", message) is not None
-    return keyword in message
+    suffix = r"s?" if keyword == "timeout" else ""
+    return re.search(r"(?<![a-z0-9])" + re.escape(keyword) + suffix + r"(?![a-z0-9])", message) is not None
 
 
 def analyze(signals: list[Signal]) -> tuple[list[RootCause], list[Remediation]]:
@@ -77,3 +78,4 @@ def analyze(signals: list[Signal]) -> tuple[list[RootCause], list[Remediation]]:
 
     causes.sort(key=lambda item: item.confidence, reverse=True)
     return causes, remediations
+
