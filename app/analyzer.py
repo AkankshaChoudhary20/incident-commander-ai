@@ -76,6 +76,6 @@ def analyze(signals: list[Signal]) -> tuple[list[RootCause], list[Remediation]]:
             )
         )
 
-    causes.sort(key=lambda item: item.confidence, reverse=True)
-    return causes, remediations
+    ranked = sorted(zip(causes, remediations), key=lambda pair: pair[0].confidence, reverse=True)
+    return [cause for cause, _ in ranked], [remediation for _, remediation in ranked]
 
