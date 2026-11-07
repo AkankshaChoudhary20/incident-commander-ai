@@ -19,7 +19,7 @@ RULES = [
         "Inspect filesystem usage, logs, and retention policies; reclaim capacity safely.",
     ),
     (
-        ("5xx", "500", "503", "internal server error"),
+        ("5xx", "500", "502", "503", "504", "internal server error"),
         "Application or upstream service failure",
         "Inspect application errors, dependency health, and recent changes.",
     ),
@@ -32,7 +32,7 @@ RULES = [
 
 
 def matches_keyword(message: str, keyword: str) -> bool:
-    if keyword in {"oom", "500", "503", "5xx"}:
+    if keyword in {"oom", "500", "502", "503", "504", "5xx"}:
         return re.search(r"(?<![a-z0-9])" + re.escape(keyword) + r"(?![a-z0-9])", message) is not None
     suffix = r"s?" if keyword == "timeout" else ""
     phrase = r"\s+".join(re.escape(word) for word in keyword.split())
@@ -79,4 +79,3 @@ def analyze(signals: list[Signal]) -> tuple[list[RootCause], list[Remediation]]:
 
     ranked = sorted(zip(causes, remediations), key=lambda pair: pair[0].confidence, reverse=True)
     return [cause for cause, _ in ranked], [remediation for _, remediation in ranked]
-
